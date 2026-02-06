@@ -1,0 +1,59 @@
+# ======================
+# Python
+# ======================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtualenv
+.venv/
+venv/
+env/
+
+# ======================
+# Flask / Runtime
+# ======================
+instance/
+*.log
+*.pid
+
+# Flask secret config (ak používaš)
+.env
+.env.*
+config.py
+
+# ======================
+# Database
+# ======================
+*.sqlite
+*.sqlite3
+*.db
+
+# Ale ak chceš mať prázdnu DB štruktúru v repozitári:
+# !schema.sql
+
+# ======================
+# Migrations (ak ešte nechceš commitovať)
+migrations/__pycache__/
+
+# ======================
+# OS / Editor bordel
+# ======================
+.DS_Store
+Thumbs.db
+
+.vscode/
+.idea/
+
+# ======================
+# Node / frontend (ak raz pridáš)
+# ======================
+node_modules/
+dist/
+build/
+
+# ======================
+# Gunicorn / Nginx
+# ======================
+gunicorn.sock

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Register{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-md-6 col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-3">Registrácia</h1>
+
+        <form method="POST" action="{{ url_for('register') }}">
+          <div class="mb-3">
+            <label class="form-label">Username</label>
+            <input
+              type="text"
+              name="username"
+              class="form-control"
+              autocomplete="username"
+              required
+              value="{{ request.form.get('username','') }}"
+            >
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input
+              type="email"
+              name="email"
+              class="form-control"
+              autocomplete="email"
+              required
+              value="{{ request.form.get('email','') }}"
+            >
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Heslo</label>
+            <input
+              type="password"
+              name="password"
+              class="form-control"
+              autocomplete="new-password"
+              required
+            >
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Heslo znova</label>
+            <input
+              type="password"
+              name="password2"
+              class="form-control"
+              autocomplete="new-password"
+              required
+            >
+          </div>
+
+          <div class="d-grid gap-2">
+            <button class="btn btn-warning" type="submit">Vytvoriť účet</button>
+            <a class="btn btn-outline-secondary" href="{{ url_for('login') }}">Už máš účet? Login</a>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

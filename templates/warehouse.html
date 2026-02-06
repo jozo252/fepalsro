@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block title %}Sklad{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+  <div class="card-body p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h1 class="h5 mb-0">Sklad paliet</h1>
+    </div>
+
+    {% if palets and palets|length > 0 %}
+
+      {# =======================
+         MOBILE: CARDS ( < md )
+         ======================= #}
+      <div class="d-block d-md-none">
+        {% for p in palets %}
+          {% set qty = stock_map.get(p.id, 0) %}
+          <div class="card mb-2">
+            <div class="card-body p-3">
+              <div class="d-flex justify-content-between align-items-start">
+                <div class="me-2">
+                  <div class="fw-semibold">{{ p.name }}</div>
+                  <div class="text-muted small">{{ p.sizes or "-" }}</div>
+                </div>
+                <div class="text-end">
+                  <div class="small text-muted">Na sklade</div>
+                  <div class="fs-5 fw-bold">{{ qty }}</div>
+                </div>
+              </div>
+
+              <form method="POST" action="{{ url_for('warehouse') }}" class="mt-3">
+                <input type="hidden" name="palet_id" value="{{ p.id }}">
+
+                <div class="row g-2">
+                  <div class="col-4">
+                    <input
+                      type="number"
+                      name="amount"
+                      min="1"
+                      step="1"
+                      required
+                      class="form-control"
+                      placeholder="ks"
+                    >
+                  </div>
+
+                  <div class="col-8">
+                    <input
+                      type="text"
+                      name="note"
+                      class="form-control"
+                      placeholder="poznámka (voliteľné)"
+                    >
+                  </div>
+
+                  <div class="col-6 d-grid">
+                    <button type="submit" name="action" value="add" class="btn btn-success btn-lg">
+                      + Pridať
+                    </button>
+                  </div>
+
+                  <div class="col-6 d-grid">
+                    <button type="submit" name="action" value="remove" class="btn btn-danger btn-lg">
+                      − Odobrať
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      {# =======================
+         DESKTOP: TABLE ( >= md )
+         ======================= #}
+      <div class="d-none d-md-block">
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Typ palety</th>
+                <th>Rozmery</th>
+                <th class="text-end">Na sklade</th>
+                <th class="text-end">Akcia</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in palets %}
+                {% set qty = stock_map.get(p.id, 0) %}
+                <tr>
+                  <td class="fw-semibold">{{ p.name }}</td>
+                  <td>{{ p.sizes or "-" }}</td>
+                  <td class="text-end">{{ qty }}</td>
+
+                  <td class="text-end">
+                    <form method="POST" action="{{ url_for('warehouse') }}"
+                          class="d-inline-flex gap-1 align-items-center">
+
+                      <input type="hidden" name="palet_id" value="{{ p.id }}">
+
+                      <input
+                        type="number"
+                        name="amount"
+                        min="1"
+                        step="1"
+                        required
+                        class="form-control form-control-sm"
+                        style="width: 80px;"
+                        placeholder="ks"
+                      >
+
+                      <input
+                        type="text"
+                        name="note"
+                        class="form-control form-control-sm"
+                        style="width: 180px;"
+                        placeholder="poznámka"
+                      >
+
+                      <button type="submit" name="action" value="add" class="btn btn-sm btn-success">
+                        + Pridať
+                      </button>
+
+                      <button type="submit" name="action" value="remove" class="btn btn-sm btn-danger">
+                        − Odobrať
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <hr class="my-4">
+
+      {# =======================
+         HISTORY SEARCH (GET)
+         ======================= #}
+      <form method="GET" action="{{ url_for('warehouse') }}" class="row g-2 align-items-end mb-3">
+        <div class="col-12 col-md-5">
+          <label class="form-label mb-1">Hľadať</label>
+          <input class="form-control form-control-sm" name="q" value="{{ request.args.get('q','') }}"
+                 placeholder="názov palety / poznámka">
+        </div>
+
+        <div class="col-6 col-md-3">
+          <label class="form-label mb-1">Od</label>
+          <input type="date" class="form-control form-control-sm" name="from" value="{{ request.args.get('from','') }}">
+        </div>
+
+        <div class="col-6 col-md-3">
+          <label class="form-label mb-1">Do</label>
+          <input type="date" class="form-control form-control-sm" name="to" value="{{ request.args.get('to','') }}">
+        </div>
+
+        <div class="col-12 col-md-1 d-grid">
+          <button class="btn btn-sm btn-dark" type="submit">OK</button>
+        </div>
+      </form>
+
+      <h2 class="h6 mb-3">História pohybov (posledných 50)</h2>
+
+      {% if moves and moves|length > 0 %}
+
+        {# MOBILE HISTORY #}
+        <div class="d-block d-md-none">
+          {% for move, palet in moves %}
+            <div class="border rounded p-2 mb-2 bg-white">
+              <div class="d-flex justify-content-between align-items-start">
+                <div class="me-2">
+                  <div class="fw-semibold">{{ palet.name }}</div>
+                  <div class="small text-muted">
+                    {% if move.created_at %}
+                      {{ move.created_at.strftime("%d.%m.%Y %H:%M") }}
+                    {% else %}
+                      -
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="text-end">
+                  {% if move.delta > 0 %}
+                    <span class="text-success fw-bold">+{{ move.delta }}</span>
+                  {% else %}
+                    <span class="text-danger fw-bold">{{ move.delta }}</span>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="small mt-1">{{ move.note or "-" }}</div>
+            </div>
+          {% endfor %}
+        </div>
+
+        {# DESKTOP HISTORY #}
+        <div class="d-none d-md-block">
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>Dátum</th>
+                  <th>Typ palety</th>
+                  <th class="text-end">Pohyb</th>
+                  <th>Poznámka</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for move, palet in moves %}
+                  <tr>
+                    <td>
+                      {% if move.created_at %}
+                        {{ move.created_at.strftime("%d.%m.%Y %H:%M") }}
+                      {% else %}
+                        -
+                      {% endif %}
+                    </td>
+                    <td class="fw-semibold">{{ palet.name }}</td>
+                    <td class="text-end">
+                      {% if move.delta > 0 %}
+                        <span class="text-success">+{{ move.delta }}</span>
+                      {% else %}
+                        <span class="text-danger">{{ move.delta }}</span>
+                      {% endif %}
+                    </td>
+                    <td>{{ move.note or "-" }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      {% else %}
+        <div class="alert alert-secondary mb-0">Zatiaľ žiadne pohyby.</div>
+      {% endif %}
+
+    {% else %}
+      <div class="alert alert-info mb-0">
+        Nemáš žiadne typy paliet. Najprv si ich vytvor.
+      </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

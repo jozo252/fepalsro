@@ -1,0 +1,88 @@
+{# templates/create_palet.html #}
+{% extends "base.html" %}
+{% block title %}Vytvoriť typ palety{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-12 col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h5 mb-3">Nový typ palety</h1>
+
+        <form method="POST" action="{{ url_for('create_palet') }}">
+          <div class="mb-3">
+            <label class="form-label">Názov</label>
+            <input
+              type="text"
+              name="name"
+              class="form-control"
+              required
+              value="{{ request.form.get('name','') }}"
+              placeholder="napr. EUR paleta / Exportná"
+            >
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Rozmery</label>
+            <input
+              type="text"
+              name="sizes"
+              class="form-control"
+              value="{{ request.form.get('sizes','') }}"
+              placeholder="napr. 1200x800x144"
+            >
+            <div class="form-text">
+              Zatiaľ len text. Keď budeš neskôr filtrovať podľa rozmerov, bude lepšie rozbiť to na L/W/H.
+            </div>
+          </div>
+
+          <button class="btn btn-warning w-100" type="submit">Uložiť</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-7">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h2 class="h6 mb-3">Tvoje typy paliet</h2>
+
+        {% if palets and palets|length > 0 %}
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>Názov</th>
+                  <th>Rozmery</th>
+                  <th>Vymazať</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in palets %}
+                  <tr>
+                    <td class="fw-semibold">{{ p.name }}</td>
+                    <td>{{ p.sizes or "-" }}</td>
+                    <td class="text-end">
+                  <form method="POST" action="{{ url_for('delete_palet', palet_id=p.id) }}"
+                        onsubmit="return confirm('Naozaj odstrániť typ palety: {{ p.name }}?');">
+                    <button class="btn btn-sm btn-outline-danger" type="submit">
+                      Odstrániť
+                    </button>
+                  </form>
+                </td>
+
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="alert alert-info mb-0">
+            Zatiaľ nemáš uložený žiadny typ palety. Vytvor prvý vľavo.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
