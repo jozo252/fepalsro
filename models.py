@@ -53,6 +53,7 @@ class User(Base, UserMixin):
     palets = relationship("Palet", back_populates="user", cascade="all, delete-orphan")
     stocks = relationship("Stock", back_populates="user", cascade="all, delete-orphan")
     stock_moves = relationship("StockMove", back_populates="user", cascade="all, delete-orphan")
+    shipments = relationship("Shipment", back_populates="user", cascade="all, delete-orphan")
 
 
     def set_password(self, password: str):
@@ -60,6 +61,7 @@ class User(Base, UserMixin):
 
     def check_password(self, password: str) -> bool:
         return check_password_hash(self.hashed_password, password)
+    
     
 class Palet(Base):
     __tablename__="palets"
@@ -107,6 +109,19 @@ class StockMove(Base):
 
     user = relationship("User", back_populates="stock_moves")
     palet = relationship("Palet", back_populates="stock_moves")
+    shipment_id=Column(Integer, ForeignKey("shipments.id"), nullable=True,index=True)
+    shipment= relationship("Shipment",back_populates="stock_moves")
+
+class Shipment(Base):
+    __tablename__="shipments"
+    id=Column(Integer,primary_key=True,index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    name=Column(String(100),nullable=False)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False, index=True)
+    moves=relationship("StockMove", back_populates="shipment", cascade="all, delete-orphan")
+    user=relationship("User", back_populates="shipments")
+
+
 
 
 def db_init():
