@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy import select, or_
-from models import User,Palet,SessionLocal, Stock, StockMove
+from models import User,Palet,SessionLocal, Stock, StockMove, Shipment
 from flask import Flask, json, request, jsonify, render_template, redirect, url_for, make_response,g,session, send_file,flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from typing import Any, Dict, List, Optional
@@ -116,7 +116,7 @@ def warehouse():
 
             moves = moves_q.order_by(StockMove.created_at.desc()).limit(50).all()
             stock_map={s.palet_id: s.qty for s in stocks}
-            return render_template("warehouse.html", palets=palets, stock_map=stock_map, moves=moves)
+            return render_template("warehouse.html", palets=palets, stock_map=stock_map, moves=moves,timedelta=timedelta)
 
         palet_id=int(request.form.get("palet_id"))
         amount=int(request.form.get("amount"))
@@ -159,6 +159,145 @@ def warehouse():
         return redirect(url_for("warehouse"))
     finally:
         db.close()
+
+@app.route("/shipments", methods=["GET", "POST"])
+@login_required
+def shipments():
+    db = SessionLocal()
+    try:
+        if request.method == "GET":
+            shipments = (db.query(Shipment)
+                         .filter(Shipment.user_id == current_user.id)
+                         .order_by(Shipment.created_at.desc())
+                         .all())
+
+            # Na render tabulky "paleta + sklad + input"
+            # (ak máš Palet tabuľku, sprav join; ak nie, aspoň Stock)
+            stocks = (db.query(Stock)
+                      .filter(Stock.user_id == current_user.id)
+                      .all())
+
+            # odporúčam mať aj palety pre názvy
+            palets = (db.query(Palet)
+                      .filter(Palet.user_id == current_user.id)
+                      .order_by(Palet.name.asc())
+                      .all())
+
+            stock_map = {s.palet_id: s.qty for s in stocks}
+            return render_template("shipments.html",
+                                   shipments=shipments,
+                                   palets=palets,
+                                   stock_map=stock_map,
+                                   timedelta=timedelta)
+
+        # ---------- POST ----------
+        name = (request.form.get("name") or "").strip()
+        if not name:
+            flash("Názov je povinný", "warning")
+            return redirect(url_for("shipments"))
+
+        exists = (db.query(Shipment)
+                  .filter(Shipment.user_id == current_user.id,
+                          Shipment.name == name)
+                  .first())
+        if exists:
+            flash("Názov už existuje", "warning")
+            return redirect(url_for("shipments"))
+
+        # 1) vyrob items z formu: qty_<palet_id> = number
+        items = []
+        for k, v in request.form.items():
+            if not k.startswith("qty_"):
+                continue
+            try:
+                palet_id = int(k.split("_", 1)[1])
+                qty = int(v or 0)
+            except ValueError:
+                continue
+            if qty > 0:
+                items.append((palet_id, qty))
+
+        if not items:
+            flash("Nevybral si žiadne palety na export (zadaj kusy > 0).", "warning")
+            return redirect(url_for("shipments"))
+
+        palet_ids = [pid for pid, _ in items]
+
+        # 2) načítaj sklad pre tieto palety
+        stocks = (db.query(Stock)
+                  .filter(Stock.user_id == current_user.id,
+                          Stock.palet_id.in_(palet_ids))
+                  .all())
+        stock_by_pid = {s.palet_id: s for s in stocks}
+
+        # 3) validácia skladov (pred ukladaním)
+        for palet_id, qty in items:
+            stock = stock_by_pid.get(palet_id)
+            if not stock:
+                flash(f"Paleta ID {palet_id} nemá skladový záznam.", "warning")
+                return redirect(url_for("shipments"))
+            if qty > stock.qty:
+                flash(f"Nedostatok na sklade pre paletu ID {palet_id}. Máš {stock.qty} ks.", "warning")
+                return redirect(url_for("shipments"))
+
+        # 4) transakcia: shipment + moves + stock update
+        shipment = Shipment(user_id=current_user.id, name=name)
+        db.add(shipment)
+        db.flush()  # teraz má shipment.id bez commitu
+
+        for palet_id, qty in items:
+            move = StockMove(
+                user_id=current_user.id,
+                palet_id=palet_id,
+                delta=-qty,
+                shipment_id=shipment.id,
+                note=None
+            )
+            db.add(move)
+            stock_by_pid[palet_id].qty -= qty
+
+        db.commit()
+        flash("Shipment vytvorený a sklad odpočítaný.", "success")
+        return redirect(url_for("shipments"))  # alebo na detail shipmentu
+
+    except Exception as e:
+        db.rollback()
+        flash(f"Chyba pri ukladaní: {e}", "danger")
+        return redirect(url_for("shipments"))
+    finally:
+        db.close()
+
+@app.route("/shipment/<int:shipment_id>", methods=["GET"])
+@login_required
+def shipment_detail(shipment_id):
+    db=SessionLocal()
+    try:
+        shipment=db.query(Shipment).filter(Shipment.user_id==current_user.id, Shipment.id==shipment_id).first()
+        moves=db.query(StockMove).filter(StockMove.shipment_id==shipment_id,StockMove.user_id==current_user.id).all()
+        if not shipment:
+            flash("Nemáš práva alebo neexistuje")
+            return redirect(url_for("shipments"))
+        return render_template("shipment_detail.html",shipment=shipment,moves=moves,timedelta=timedelta)
+    finally:
+        db.close()
+
+@app.route("/shipment/<int:shipment_id>/delete", methods=["POST"])
+@login_required
+def delete_shipment(shipment_id):
+    db=SessionLocal()
+    try:
+        shipment=db.query(Shipment).filet(Shipment.user_id==current_user.id, Shipment.id==shipment_id).first()
+        if not shipment:
+            flash("Nemáš práva alebo neexistuje")
+            return redirect(url_for("shipments"))
+        db.delete(shipment)
+        db.commit()
+        flash("Shipment vymazaný. Sklad sa neobnovuje.", "info")
+        return redirect(url_for("shipments"))
+    finally:
+        db.close()
+    
+
 
 #------------------------------ END of ROUTES ---------------------------------#
 #------------------------------- Login -------------------------------#

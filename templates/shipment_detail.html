@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Shipment {{ shipment.name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <h1>Export: {{ shipment.name }}</h1>
+
+  <div style="margin-bottom: 20px;">
+    <strong>Dátum vytvorenia:</strong>
+    {% if shipment.created_at %}
+      {{ (shipment.created_at + timedelta(hours=1)).strftime('%d.%m.%Y %H:%M') }}
+    {% else %}
+      -
+    {% endif %}
+  </div>
+  <section class="card">
+    <div class="card-header">
+      <h2>Položky v exporte</h2>
+    </div>
+
+    <div class="card-body">
+      {% if moves %}
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Typ palety</th>
+              <th>Počet kusov</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for move in moves %}
+              <tr>
+                <td>
+                  {{ move.palet.name }}
+                  {% if move.palet.sizes %}
+                    <div><small>{{ move.palet.sizes }}</small></div>
+                  {% endif %}
+                </td>
+                <td>
+                  {{ -move.delta }} ks
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p>Export neobsahuje žiadne položky.</p>
+      {% endif %}
+    </div>
+  </section>
+
+  <div style="margin-top: 20px;">
+    <a href="{{ url_for('shipments') }}" class="btn btn-secondary">
+      ← Späť na zoznam exportov
+    </a>
+  </div>
+
+</div>
+{% endblock %}

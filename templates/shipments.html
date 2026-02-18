@@ -1,0 +1,147 @@
+{# templates/shipments.html #}
+{% extends "base.html" %}
+{% block title %}Shipments{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <h1>Export kamión</h1>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="alerts">
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="grid grid-2">
+
+    <!-- LEFT: CREATE SHIPMENT + ITEMS -->
+    <section class="card">
+      <div class="card-header">
+        <h2>Nový export</h2>
+        <p><small>Zadaj názov a kusy. 0 = neexportovať.</small></p>
+      </div>
+
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('shipments') }}">
+
+          <div class="field">
+            <label for="name">Názov</label>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              maxlength="100"
+              placeholder="napr. Kamión 17.02.2026"
+              required
+              autocomplete="off"
+            >
+          </div>
+
+          <div class="field">
+            <label>Palety a kusy</label>
+
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Typ palety</th>
+                  <th>Sklad</th>
+                  <th>Kusy do exportu</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for palet in palets %}
+                  {% set qty = stock_map.get(palet.id, 0) %}
+                  <tr>
+                    <td>
+                      <strong>{{ palet.name }}</strong>
+                      {% if palet.sizes %}
+                        <div><small>{{ palet.sizes }}</small></div>
+                      {% endif %}
+                    </td>
+
+                    <td>{{ qty }} ks</td>
+
+                    <td style="max-width: 170px;">
+                      <input
+                        type="number"
+                        name="qty_{{ palet.id }}"
+                        min="0"
+                        max="{{ qty }}"
+                        value="0"
+                      >
+                      <div><small>max {{ qty }}</small></div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="actions">
+            <button type="submit" class="btn btn-primary">
+              Vytvoriť export a odpočítať sklad
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </section>
+
+   <!-- RIGHT: LIST SHIPMENTS -->
+<!-- RIGHT: LIST SHIPMENTS -->
+<section class="card">
+  <div class="card-header">
+    <h2>Posledné kamióny</h2>
+  </div>
+
+  <div class="card-body">
+    {% if shipments %}
+      <table class="table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Názov</th>
+            <th>Dátum vytvorenia</th>
+            <th style="text-align:right;">Akcia</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sh in shipments %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <td>{{ sh.name }}</td>
+              <td>
+                {% if sh.created_at %}
+                    {{ (sh.created_at + timedelta(hours=1)).strftime('%d.%m.%Y %H:%M') }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td style="text-align:right;">
+                <a href="{{ url_for('shipment_detail', shipment_id=sh.id) }}"
+                   class="btn btn-primary btn-sm">
+                  Detail
+                </a>
+                
+              </td>
+              
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>Zatiaľ nemáš žiadne shipments.</p>
+    {% endif %}
+  </div>
+</section>
+
+
+
+  </div>
+</div>
+{% endblock %}

@@ -175,7 +175,7 @@
                   <div class="fw-semibold">{{ palet.name }}</div>
                   <div class="small text-muted">
                     {% if move.created_at %}
-                      {{ move.created_at.strftime("%d.%m.%Y %H:%M") }}
+                      {{ (move.created_at + timedelta(hours=1)).strftime("%d.%m.%Y %H:%M") }}
                     {% else %}
                       -
                     {% endif %}
@@ -213,7 +213,7 @@
                   <tr>
                     <td>
                       {% if move.created_at %}
-                        {{ move.created_at.strftime("%d.%m.%Y %H:%M") }}
+                        {{ (move.created_at + timedelta(hours=1)).strftime("%d.%m.%Y %H:%M") }}
                       {% else %}
                         -
                       {% endif %}

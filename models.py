@@ -109,8 +109,8 @@ class StockMove(Base):
 
     user = relationship("User", back_populates="stock_moves")
     palet = relationship("Palet", back_populates="stock_moves")
-    shipment_id=Column(Integer, ForeignKey("shipments.id"), nullable=True,index=True)
-    shipment= relationship("Shipment",back_populates="stock_moves")
+    shipment_id = Column(Integer, ForeignKey("shipments.id", ondelete="SET NULL"), nullable=True, index=True)
+    shipment = relationship("Shipment", back_populates="stock_moves")
 
 class Shipment(Base):
     __tablename__="shipments"
@@ -118,7 +118,7 @@ class Shipment(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     name=Column(String(100),nullable=False)
     created_at = Column(DateTime, server_default=func.now(), nullable=False, index=True)
-    moves=relationship("StockMove", back_populates="shipment", cascade="all, delete-orphan")
+    stock_moves=relationship("StockMove", back_populates="shipment")
     user=relationship("User", back_populates="shipments")
 
 
